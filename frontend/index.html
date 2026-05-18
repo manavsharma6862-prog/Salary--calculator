@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SalaryGuru — Indian In-Hand Calculator</title>
+  <meta name="description" content="Calculate your exact in-hand salary under Indian tax regime FY 2024-25. Compare Old vs New regime with AI-powered insights." />
+  <link rel="stylesheet" href="css/styles.css" />
+
+  <!-- Point to your Render backend URL. Fallback = localhost for dev -->
+  <script>
+    window.BACKEND_URL = "http://localhost:3001"; // ← Replace with Render URL
+  </script>
+</head>
+<body>
+
+  <!-- ── Header ──────────────────────────────────────────────────────────── -->
+  <header class="header">
+    <div class="header-badge">FY 2024-25 · AY 2025-26</div>
+    <h1>Salary<span>Guru</span></h1>
+    <p>Indian In-Hand Salary Calculator · New &amp; Old Tax Regime · AI Insights</p>
+  </header>
+
+  <!-- ── Main ────────────────────────────────────────────────────────────── -->
+  <main class="container">
+
+    <div class="main-grid">
+
+      <!-- Input Card -->
+      <div class="card" style="animation-delay:0.1s">
+        <div class="card-title"><span class="dot"></span>Your CTC Details</div>
+
+        <div class="form-group">
+          <label for="ctc-input">Annual CTC (₹)</label>
+          <input type="text" id="ctc-input" placeholder="e.g. 12L or 1200000" inputmode="numeric" />
+        </div>
+
+        <div class="form-group">
+          <label>Tax Regime</label>
+          <div class="regime-toggle">
+            <button class="regime-btn" data-regime="new">New Regime</button>
+            <button class="regime-btn" data-regime="old">Old Regime</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="city-select">City Type</label>
+          <select id="city-select">
+            <option value="metro">Metro (Mumbai, Delhi, Kolkata, Chennai)</option>
+            <option value="non-metro">Non-Metro</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="rent-input">Monthly Rent Paid (₹) — for HRA</label>
+          <input type="number" id="rent-input" placeholder="0 if no HRA claim" min="0" />
+        </div>
+
+        <div class="form-group">
+          <label for="age-select">Age Group</label>
+          <select id="age-select">
+            <option value="below60">Below 60</option>
+            <option value="60to80">Senior Citizen (60–80)</option>
+            <option value="above80">Super Senior (80+)</option>
+          </select>
+        </div>
+
+        <button class="btn-calculate" id="btn-calculate">Calculate In-Hand ↗</button>
+      </div>
+
+      <!-- Result Card -->
+      <div class="card" style="animation-delay:0.2s">
+        <div class="card-title"><span class="dot"></span>Monthly In-Hand</div>
+
+        <div id="result-section" class="hidden">
+          <div class="result-hero">
+            <div class="label">Take-Home Every Month</div>
+            <div class="amount" id="result-monthly">—</div>
+            <div class="sub" id="result-annual">—</div>
+          </div>
+
+          <!-- Donut -->
+          <div id="donut-container"></div>
+        </div>
+
+        <div id="result-placeholder" style="color:var(--muted);font-style:italic;font-size:0.88rem;padding:1rem 0">
+          Enter your CTC and click Calculate to see your in-hand salary breakdown.
+        </div>
+      </div>
+
+    </div><!-- /main-grid -->
+
+    <!-- Breakdown Grid -->
+    <div class="main-grid" id="breakdown-grid" style="display:none">
+
+      <!-- Salary Components -->
+      <div class="card" style="animation-delay:0.3s">
+        <div class="card-title"><span class="dot"></span>Salary Components (Annual)</div>
+        <ul class="breakdown-list" id="components-list"></ul>
+      </div>
+
+      <!-- Deductions -->
+      <div class="card" style="animation-delay:0.35s">
+        <div class="card-title"><span class="dot"></span>Deductions (Annual)</div>
+        <ul class="breakdown-list" id="deductions-list"></ul>
+      </div>
+
+    </div>
+
+    <!-- Regime Comparison -->
+    <div class="card hidden" id="regime-card" style="animation-delay:0.4s">
+      <div class="card-title"><span class="dot"></span>Regime Comparison</div>
+      <div class="compare-grid">
+        <div class="compare-card" id="compare-old"></div>
+        <div class="compare-card" id="compare-new"></div>
+      </div>
+      <p id="savings-note" style="text-align:center;margin-top:0.75rem;font-family:var(--font-mono);font-size:0.75rem;color:var(--muted)"></p>
+    </div>
+
+    <!-- AI Section -->
+    <div class="card" style="animation-delay:0.45s">
+      <div class="card-title"><span class="dot"></span>AI Salary Insights · Powered by Groq + Llama 3.1</div>
+
+      <div class="ai-output" id="ai-output">
+        <span class="ai-placeholder">Calculate your salary first, then ask SalaryGuru for insights.</span>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-top:0.75rem">
+        <button class="btn-ai" id="btn-explain" disabled>⚡ Explain My Salary</button>
+        <button class="btn-ai" id="btn-advice" disabled>💡 Tax Saving Tips</button>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <p>Based on Indian Income Tax rules · FY 2024-25 · For informational purposes only.</p>
+    <p style="margin-top:0.3rem">Built with Node.js · Groq + Llama 3.1 · Deployed on Vercel + Render</p>
+  </footer>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script type="module" src="js/app.js"></script>
+
+  <!-- Show breakdown grid + regime card after calculation -->
+  <script type="module">
+    import { api } from "./js/api.js";
+
+    // Observe result-section to show breakdown when results appear
+    const observer = new MutationObserver(() => {
+      const hasResult = !document.getElementById("result-section").classList.contains("hidden");
+      document.getElementById("breakdown-grid").style.display = hasResult ? "grid" : "none";
+      document.getElementById("regime-card").classList.toggle("hidden", !hasResult);
+      document.getElementById("result-placeholder").style.display = hasResult ? "none" : "";
+    });
+
+    observer.observe(document.getElementById("result-section"), {
+      attributes: true, attributeFilter: ["class"],
+    });
+  </script>
+
+</body>
+</html>
