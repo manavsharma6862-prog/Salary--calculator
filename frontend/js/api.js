@@ -3,7 +3,7 @@
  * Change BASE_URL to your Render deployment URL in production
  */
 
-const BASE_URL = window.BACKEND_URL || "http://localhost:3001";
+const BASE_URL = window.BACKEND_URL || "https://salary-calculator-jm9k.onrender.com";
 
 async function post(endpoint, body) {
   const res = await fetch(`${BASE_URL}${endpoint}`, {
